@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sun Spectrum Chart</title>
+  <meta name="description" content="Sun Spectrum Chart" />
+  <style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100vw; height: 100vh; overflow: hidden; font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #0f0c29; color: #1a1a1a; }
+body { display: flex; justify-content: center; align-items: flex-start; }
+
+.sun-chart-container {
+  width: 100vw;
+  height: 100vh;
+  max-width: 100%;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  border-radius: 0;
+  padding: 12px 24px 8px;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sun-chart-title {
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #ffd700;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.zip-input-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.latlon-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.6);
+  letter-spacing: 0.5px;
+}
+
+.zip-input {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.85rem;
+  padding: 5px 12px;
+  width: 130px;
+  outline: none;
+  text-align: center;
+  letter-spacing: 1px;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.latlon-input {
+  width: 90px;
+  letter-spacing: 0.5px;
+}
+
+.zip-input::placeholder {
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 0;
+}
+
+.zip-input:focus {
+  border-color: rgba(255, 215, 0, 0.6);
+  background: rgba(255,255,255,0.15);
+}
+
+.zip-submit {
+  background: rgba(255, 215, 0, 0.15);
+  border: 1px solid rgba(255, 215, 0, 0.5);
+  border-radius: 8px;
+  color: #ffd700;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 5px 16px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.zip-submit:hover {
+  background: rgba(255, 215, 0, 0.28);
+  border-color: rgba(255, 215, 0, 0.8);
+}
+
+.sun-chart-wrapper {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  border-radius: 0;
+  overflow: hidden;
+  background: #0d0d1a;
+}
+
+.sun-chart-wrapper canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.sun-chart-info {
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 6px 18px;
+  min-width: 100px;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.info-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 2px;
+}
+
+.info-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffd700;
+}
+
+/* ── Solar Spectrum Section ── */
+.spectrum-section {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  flex-shrink: 0;
+}
+
+.spectrum-title {
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+  margin-bottom: 6px;
+  letter-spacing: 0.4px;
+}
+
+.spectrum-bar-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.spectrum-bar-outer {
+  position: relative;
+  width: 100%;
+  min-width: 400px;
+}
+
+.spectrum-bar {
+  display: flex;
+  width: 100%;
+  height: 28px;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(255,220,100,0.15);
+}
+
+.spec-band {
+  height: 100%;
+  flex-shrink: 0;
+  transition: filter 0.2s;
+  cursor: default;
+}
+
+.spec-band:hover {
+  filter: brightness(1.35) saturate(1.3);
+  z-index: 2;
+  position: relative;
+}
+
+/* Spectrum cursor line */
+.spectrum-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 6px 2px rgba(255,255,255,0.7);
+  border-radius: 1px;
+  pointer-events: none;
+  display: none;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+.spectrum-labels {
+  display: flex;
+  width: 100%;
+  min-width: 400px;
+  margin-top: 4px;
+}
+
+.spectrum-labels span {
+  text-align: center;
+  font-size: 0.55rem;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.2;
+  padding: 1px 1px;
+  word-break: break-word;
+}
+
+.spectrum-labels span em {
+  font-style: normal;
+  color: rgba(255,255,255,0.35);
+  display: block;
+  font-size: 0.52rem;
+}
+
+.spectrum-note {
+  margin-top: 5px;
+  text-align: center;
+  font-size: 0.62rem;
+  color: rgba(255,255,255,0.38);
+  line-height: 1.4;
+}
+
+  </style>
+</head>
+<body>
+<div class="sun-chart-container">
+  <h2 class="sun-chart-title">Spectral Irradiance Chart</h2>
+  <div class="zip-input-row">
+    <label class="latlon-label">Lat</label>
+    <input type="text" id="latInput" class="zip-input latlon-input" placeholder="40.71" maxlength="9" inputmode="decimal" />
+    <label class="latlon-label">Lon</label>
+    <input type="text" id="lonInput" class="zip-input latlon-input" placeholder="-74.01" maxlength="10" inputmode="decimal" />
+    <button id="zipSubmit" class="zip-submit">Go</button>
+  </div>
+  <div class="sun-chart-wrapper">
+    <canvas id="sunChart" width="800" height="400"></canvas>
+  </div>
+  <div class="sun-chart-info">
+    <div class="info-item">
+      <span class="info-label">Latitude</span>
+      <span class="info-value" id="sunriseTime">40.71°</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">Longitude</span>
+      <span class="info-value" id="solarNoon">-74.01°</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">Peak nm</span>
+      <span class="info-value" id="sunsetTime">~501 nm</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">Solar Angle Factor</span>
+      <span class="info-value" id="currentElevation">--</span>
+    </div>
+  </div>
+
+  <div class="spectrum-section">
+    <h3 class="spectrum-title">Solar Electromagnetic Spectrum (350–800 nm)</h3>
+    <div class="spectrum-bar-wrap">
+      <div class="spectrum-bar-outer" id="spectrumBarOuter">
+        <div class="spectrum-bar" id="spectrumBar">
+          <!-- 350–380: deep UV/violet transition -->
+          <div class="spec-band" style="flex:3; background: linear-gradient(to right, #1a0033, #3b0070);" data-label="UV" data-nm="350–380 nm"></div>
+          <!-- 380–450: Violet -->
+          <div class="spec-band" style="flex:7; background: linear-gradient(to right, #3b0070, #6600ff);" data-label="Violet" data-nm="380–450 nm"></div>
+          <!-- 450–485: Indigo/Blue -->
+          <div class="spec-band" style="flex:3.5; background: linear-gradient(to right, #6600ff, #0000ff);" data-label="Indigo" data-nm="450–485 nm"></div>
+          <!-- 485–500: Blue -->
+          <div class="spec-band" style="flex:1.5; background: linear-gradient(to right, #0000ff, #00aaff);" data-label="Blue" data-nm="485–500 nm"></div>
+          <!-- 500–520: Cyan -->
+          <div class="spec-band" style="flex:2; background: linear-gradient(to right, #00aaff, #00ffcc);" data-label="Cyan" data-nm="500–520 nm"></div>
+          <!-- 520–565: Green -->
+          <div class="spec-band" style="flex:4.5; background: linear-gradient(to right, #00ffcc, #00ff00);" data-label="Green" data-nm="520–565 nm"></div>
+          <!-- 565–590: Yellow-Green -->
+          <div class="spec-band" style="flex:2.5; background: linear-gradient(to right, #00ff00, #aaff00);" data-label="Yel-Grn" data-nm="565–590 nm"></div>
+          <!-- 590–625: Yellow -->
+          <div class="spec-band" style="flex:3.5; background: linear-gradient(to right, #aaff00, #ffff00);" data-label="Yellow" data-nm="590–625 nm"></div>
+          <!-- 625–700: Orange-Red -->
+          <div class="spec-band" style="flex:7.5; background: linear-gradient(to right, #ffff00, #ff4400);" data-label="Orange-Red" data-nm="625–700 nm"></div>
+          <!-- 700–780: Red -->
+          <div class="spec-band" style="flex:8; background: linear-gradient(to right, #ff4400, #cc0000);" data-label="Red" data-nm="700–780 nm"></div>
+          <!-- 780–800: Near-IR onset -->
+          <div class="spec-band" style="flex:2; background: linear-gradient(to right, #cc0000, #660000);" data-label="Near-IR" data-nm="780–800 nm"></div>
+        </div>
+        <div class="spectrum-cursor" id="spectrumCursor"></div>
+      </div>
+      <div class="spectrum-labels" id="spectrumLabels">
+        <span style="flex:3">UV<br><em>350–380</em></span>
+        <span style="flex:7">Violet<br><em>380–450</em></span>
+        <span style="flex:3.5">Indigo<br><em>450–485</em></span>
+        <span style="flex:1.5">Blue<br><em>485–500</em></span>
+        <span style="flex:2">Cyan<br><em>500–520</em></span>
+        <span style="flex:4.5">Green<br><em>520–565</em></span>
+        <span style="flex:2.5">Yel-Grn<br><em>565–590</em></span>
+        <span style="flex:3.5">Yellow<br><em>590–625</em></span>
+        <span style="flex:7.5">Org-Red<br><em>625–700</em></span>
+        <span style="flex:8">Red<br><em>700–780</em></span>
+        <span style="flex:2">NIR<br><em>780–800</em></span>
+      </div>
+    </div>
+    <div class="spectrum-note">Wavelengths in nanometres (nm). Range shown: 350–800 nm. ~44% of solar energy is visible light; ~52% is infrared; ~4% is UV.</div>
+  </div>
+</div>
+
+<script>
+(function() {
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  // Default: custom location
+  let userLat = 40.09;
+  let userLon = -123.78;
+
+  // ── Spectral irradiance model (0–800 nm) ──
+  // Approximates the AM1.5 / solar spectrum shape modulated by a latitude-based
+  // air-mass factor. Returns array of { nm, irr } objects.
+  function buildSpectralData(lat, lon) {
+    // Air-mass proxy: higher abs(lat) => more atmosphere => less UV, shifted peak
+    const absLat = Math.abs(lat);
+    // Simple air-mass approximation from latitude (season-averaged solar angle)
+    const avgElev = Math.max(5, 90 - absLat); // rough average solar elevation
+    const elevRad = avgElev * Math.PI / 180;
+    const AM = 1 / Math.sin(elevRad); // air mass
+
+    const points = [];
+    for (let nm = 0; nm <= 800; nm += 2) {
+      let irr = 0;
+
+      if (nm < 280) {
+        // UV-C and below: mostly absorbed by ozone, tiny values
+        irr = 0.002 * Math.exp((nm - 280) / 30);
+      } else if (nm < 315) {
+        // UVB: rises steeply, strongly attenuated by AM
+        const t = (nm - 280) / 35;
+        irr = 0.12 * t * Math.exp(-AM * 0.18 * (1 - t));
+      } else if (nm < 400) {
+        // UVA: continues rising
+        const t = (nm - 315) / 85;
+        irr = 0.12 + 1.1 * t;
+        irr *= Math.exp(-AM * 0.04);
+      } else if (nm < 500) {
+        // Violet → Blue: rapid rise to near-peak
+        const t = (nm - 400) / 100;
+        irr = 1.22 + 4.2 * t;
+        // Fraunhofer-like absorption dips
+        irr *= (1 - 0.18 * Math.exp(-Math.pow((nm - 431) / 3, 2)));
+        irr *= (1 - 0.12 * Math.exp(-Math.pow((nm - 486) / 2.5, 2)));
+        irr *= Math.exp(-AM * 0.022);
+      } else if (nm < 560) {
+        // Green peak region
+        const t = (nm - 500) / 60;
+        irr = 5.42 + 1.4 * t - 0.8 * t * t;
+        // absorption features
+        irr *= (1 - 0.08 * Math.exp(-Math.pow((nm - 517) / 3, 2)));
+        irr *= (1 - 0.06 * Math.exp(-Math.pow((nm - 527) / 2, 2)));
+        irr *= Math.exp(-AM * 0.012);
+      } else if (nm < 650) {
+        // Yellow-Orange: broad plateau
+        const t = (nm - 560) / 90;
+        irr = 6.1 + 0.5 * t - 0.3 * t * t;
+        irr *= (1 - 0.09 * Math.exp(-Math.pow((nm - 589) / 2, 2)));
+        irr *= (1 - 0.05 * Math.exp(-Math.pow((nm - 627) / 3, 2)));
+        irr *= Math.exp(-AM * 0.010);
+      } else if (nm < 700) {
+        // Red: slight dip then recovery
+        const t = (nm - 650) / 50;
+        irr = 6.3 - 0.5 * t;
+        // H-alpha absorption ~656 nm
+        irr *= (1 - 0.15 * Math.exp(-Math.pow((nm - 656) / 2, 2)));
+        irr *= Math.exp(-AM * 0.009);
+      } else if (nm < 760) {
+        // Deep red / NIR onset
+        const t = (nm - 700) / 60;
+        irr = 5.85 - 0.4 * t;
+        irr *= Math.exp(-AM * 0.008);
+      } else if (nm < 775) {
+        // Oxygen A-band deep absorption ~762 nm
+        const t = (nm - 760) / 15;
+        const oxyDip = 1 - 0.92 * Math.exp(-Math.pow((nm - 762) / 2.5, 2));
+        irr = (5.61 - t * 0.3) * oxyDip;
+        irr *= Math.exp(-AM * 0.008);
+      } else {
+        // 775–800: recovery after O2 band
+        const t = (nm - 775) / 25;
+        irr = 5.1 + 0.4 * t;
+        irr *= Math.exp(-AM * 0.008);
+      }
+
+      // Global scale by AM (more AM = less total irradiance)
+      irr = irr * Math.pow(0.93, Math.max(0, AM - 1));
+      irr = Math.max(0, irr);
+      points.push({ nm: nm, irr: irr });
+    }
+    return points;
+  }
+
+  // Map wavelength (nm) to an RGB colour for background colouring
+  function nmToRgba(nm, alpha) {
+    let r = 0, g = 0, b = 0;
+    if (nm < 380) {
+      // UV – deep purple
+      const t = Math.max(0, (nm - 280) / 100);
+      r = Math.round(80 * t); g = 0; b = Math.round(120 * t);
+    } else if (nm < 440) {
+      r = Math.round(180 - (nm - 380) * 2); g = 0; b = 255;
+    } else if (nm < 490) {
+      r = 0; g = Math.round((nm - 440) * 5.1); b = 255;
+    } else if (nm < 510) {
+      r = 0; g = 255; b = Math.round(255 - (nm - 490) * 12.75);
+    } else if (nm < 580) {
+      r = Math.round((nm - 510) * 3.64); g = 255; b = 0;
+    } else if (nm < 645) {
+      r = 255; g = Math.round(255 - (nm - 580) * 3.92); b = 0;
+    } else if (nm <= 780) {
+      r = 255; g = 0; b = 0;
+    } else {
+      // IR – dark red
+      r = Math.round(180 * Math.max(0, 1 - (nm - 780) / 40)); g = 0; b = 0;
+    }
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+  }
+
+  function resizeCanvas() {
+    const canvas = document.getElementById('sunChart');
+    if (!canvas) return;
+    const wrapper = canvas.parentElement;
+    if (!wrapper) return;
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = wrapper.clientWidth;
+    const cssH = wrapper.clientHeight;
+    if (cssW < 1 || cssH < 1) return;
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    canvas.style.width = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+  }
+
+  let hoverNm = null;
+
+  // ── Spectrum bar cursor sync ──
+  // NM_MIN/NM_MAX must match the chart constants
+  const SPEC_NM_MIN = 350;
+  const SPEC_NM_MAX = 800;
+
+  function updateSpectrumCursor(nm) {
+    const cursor = document.getElementById('spectrumCursor');
+    const bar = document.getElementById('spectrumBar');
+    if (!cursor || !bar) return;
+    if (nm === null || nm === undefined) {
+      cursor.style.display = 'none';
+      return;
+    }
+    const rect = bar.getBoundingClientRect();
+    const frac = (nm - SPEC_NM_MIN) / (SPEC_NM_MAX - SPEC_NM_MIN);
+    const px = frac * rect.width;
+    cursor.style.display = 'block';
+    cursor.style.left = px + 'px';
+  }
+
+  function drawChart(hNm) {
+    const canvas = document.getElementById('sunChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+    const dpr = window.devicePixelRatio || 1;
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    ctx.scale(dpr, dpr);
+
+    const cssW = W / dpr;
+    const cssH = H / dpr;
+
+    // Dark background
+    ctx.fillStyle = '#0d0d1a';
+    ctx.fillRect(0, 0, cssW, cssH);
+
+    const padL = 68, padR = 30, padT = 28, padB = 48;
+    const chartW = cssW - padL - padR;
+    const chartH = cssH - padT - padB;
+
+    const NM_MIN = 350, NM_MAX = 800;
+    const IRR_MAX = 8.5; // Wh/m²/nm axis max
+
+    function nmToX(nm) { return padL + (nm - NM_MIN) / (NM_MAX - NM_MIN) * chartW; }
+    function irrToY(irr) { return padT + chartH - (irr / IRR_MAX) * chartH; }
+
+    // ── Spectrum background (coloured bands behind chart area) ──
+    const bandStep = 2;
+    for (let nm = NM_MIN; nm < NM_MAX; nm += bandStep) {
+      const x0 = nmToX(nm);
+      const x1 = nmToX(nm + bandStep);
+      const alpha = nm < 380 ? 0.12 : (nm > 780 ? 0.10 : 0.28);
+      const grad = ctx.createLinearGradient(x0, 0, x1, 0);
+      grad.addColorStop(0, nmToRgba(nm, alpha));
+      grad.addColorStop(1, nmToRgba(nm + bandStep, alpha));
+      ctx.fillStyle = grad;
+      ctx.fillRect(x0, padT, x1 - x0, chartH);
+    }
+
+    // ── Grid lines ──
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    // vertical nm grid
+    for (let nm = NM_MIN; nm <= NM_MAX; nm += 50) {
+      const x = nmToX(nm);
+      ctx.beginPath();
+      ctx.moveTo(x, padT);
+      ctx.lineTo(x, padT + chartH);
+      ctx.stroke();
+    }
+    // horizontal irradiance grid
+    for (let irr = 0; irr <= IRR_MAX; irr += 1) {
+      const y = irrToY(irr);
+      ctx.beginPath();
+      ctx.moveTo(padL, y);
+      ctx.lineTo(padL + chartW, y);
+      ctx.stroke();
+    }
+
+    // ── Build spectral data ──
+    const data = buildSpectralData(userLat, userLon);
+    // Filter to only points within NM_MIN..NM_MAX
+    const visibleData = data.filter(function(p) { return p.nm >= NM_MIN && p.nm <= NM_MAX; });
+
+    // ── Filled area under curve ──
+    ctx.beginPath();
+    ctx.moveTo(nmToX(visibleData[0].nm), irrToY(0));
+    visibleData.forEach(function(p) { ctx.lineTo(nmToX(p.nm), irrToY(p.irr)); });
+    ctx.lineTo(nmToX(visibleData[visibleData.length - 1].nm), irrToY(0));
+    ctx.closePath();
+    // Gradient fill matching spectrum colours
+    const fillGrad = ctx.createLinearGradient(padL, 0, padL + chartW, 0);
+    fillGrad.addColorStop(0,    'rgba(60,0,80,0.35)');
+    fillGrad.addColorStop(0.35, 'rgba(0,0,200,0.30)');
+    fillGrad.addColorStop(0.50, 'rgba(0,200,80,0.28)');
+    fillGrad.addColorStop(0.65, 'rgba(200,200,0,0.28)');
+    fillGrad.addColorStop(0.80, 'rgba(255,60,0,0.30)');
+    fillGrad.addColorStop(1,    'rgba(100,0,0,0.22)');
+    ctx.fillStyle = fillGrad;
+    ctx.fill();
+
+    // ── Curve line ──
+    ctx.beginPath();
+    visibleData.forEach(function(p, i) {
+      const x = nmToX(p.nm);
+      const y = irrToY(p.irr);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // ── PAR region label (400–700 nm) ──
+    const parX0 = nmToX(400);
+    const parX1 = nmToX(700);
+    ctx.strokeStyle = 'rgba(100,255,150,0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(parX0, padT); ctx.lineTo(parX0, padT + chartH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(parX1, padT); ctx.lineTo(parX1, padT + chartH); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(100,255,150,0.7)';
+    ctx.font = '11px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('PAR 400\u2013700 nm \u00b7 visible', (parX0 + parX1) / 2, padT + 14);
+
+    // ── Hover cursor ──
+    if (hNm !== null && hNm !== undefined) {
+      const hx = nmToX(hNm);
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(hx, padT); ctx.lineTo(hx, padT + chartH); ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Find irradiance at hover nm
+      const idx = Math.round((hNm - NM_MIN) / 2);
+      const pt = visibleData[Math.max(0, Math.min(visibleData.length - 1, idx))];
+      const hy = irrToY(pt ? pt.irr : 0);
+
+      // dot
+      ctx.beginPath();
+      ctx.arc(hx, hy, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+
+      // tooltip
+      const ttText = Math.round(hNm) + ' nm  |  ' + (pt ? pt.irr.toFixed(2) : '0.00') + ' Wh/m\u00b2/nm';
+      ctx.font = 'bold 11px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      const ttW = ctx.measureText(ttText).width + 16;
+      let ttX = Math.max(padL + ttW / 2, Math.min(padL + chartW - ttW / 2, hx));
+      ctx.fillStyle = 'rgba(20,20,40,0.88)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(ttX - ttW / 2, padT + 2, ttW, 20, 4);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.fillText(ttText, ttX, padT + 16);
+      ctx.textAlign = 'left';
+    }
+
+    // ── X-axis labels (nm) ──
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.font = '11px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    for (let nm = NM_MIN; nm <= NM_MAX; nm += 50) {
+      const x = nmToX(nm);
+      ctx.fillText(nm, x, padT + chartH + 16);
+    }
+    // axis title
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.font = '11px Inter, sans-serif';
+    ctx.fillText('Wavelength (nm)', padL + chartW / 2, padT + chartH + 34);
+
+    // ── Y-axis labels ──
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.font = '11px Inter, sans-serif';
+    for (let irr = 0; irr <= IRR_MAX; irr += 1) {
+      const y = irrToY(irr);
+      if (y < padT - 4 || y > padT + chartH + 4) continue;
+      ctx.fillText(irr, padL - 8, y + 4);
+    }
+    // Y axis title (rotated)
+    ctx.save();
+    ctx.translate(14, padT + chartH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.font = '11px Inter, sans-serif';
+    ctx.fillText('Spectral irradiance (Wh/m\u00b2/nm)', 0, 0);
+    ctx.restore();
+
+    ctx.restore();
+
+    // ── Info panel updates ──
+    document.getElementById('sunriseTime').textContent = userLat.toFixed(4) + '\u00b0';
+    document.getElementById('solarNoon').textContent = userLon.toFixed(4) + '\u00b0';
+
+    // Peak nm
+    let peakNm = 0, peakIrr = 0;
+    data.forEach(function(p) { if (p.irr > peakIrr) { peakIrr = p.irr; peakNm = p.nm; } });
+    document.getElementById('sunsetTime').textContent = '~' + peakNm + ' nm';
+
+    // Air-mass factor display
+    const absLat = Math.abs(userLat);
+    const avgElev = Math.max(5, 90 - absLat);
+    const AM = (1 / Math.sin(avgElev * Math.PI / 180)).toFixed(2);
+    document.getElementById('currentElevation').textContent = 'AM ' + AM;
+
+    // ── Sync spectrum bar cursor ──
+    updateSpectrumCursor(hNm);
+  }
+
+  function getCanvasNm(canvas, clientX) {
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const padL = 68, padR = 30;
+    const chartW = rect.width - padL - padR;
+    const NM_MIN = 350, NM_MAX = 800;
+    const nm = NM_MIN + (x - padL) / chartW * (NM_MAX - NM_MIN);
+    return Math.max(NM_MIN, Math.min(NM_MAX, nm));
+  }
+
+  function setupInteraction(canvas) {
+    canvas.style.cursor = 'crosshair';
+
+    canvas.addEventListener('mouseenter', function(e) {
+      hoverNm = getCanvasNm(canvas, e.clientX);
+      drawChart(hoverNm);
+    });
+    canvas.addEventListener('mousemove', function(e) {
+      hoverNm = getCanvasNm(canvas, e.clientX);
+      drawChart(hoverNm);
+    });
+    canvas.addEventListener('mouseleave', function() {
+      hoverNm = null;
+      drawChart(null);
+    });
+    canvas.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      hoverNm = getCanvasNm(canvas, e.touches[0].clientX);
+      drawChart(hoverNm);
+    }, { passive: false });
+    canvas.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+      hoverNm = getCanvasNm(canvas, e.touches[0].clientX);
+      drawChart(hoverNm);
+    }, { passive: false });
+    canvas.addEventListener('touchend', function() {
+      hoverNm = null;
+      drawChart(null);
+    });
+  }
+
+  // ── Lat/Lon input ──
+  function setStatus(msg, color) {
+    let el = document.getElementById('zipStatus');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'zipStatus';
+      el.style.cssText = 'text-align:center;font-size:0.72rem;margin-top:-4px;margin-bottom:4px;min-height:1em;transition:color 0.2s;';
+      const row = document.querySelector('.zip-input-row');
+      if (row && row.parentNode) row.parentNode.insertBefore(el, row.nextSibling);
+    }
+    el.textContent = msg;
+    el.style.color = color || 'rgba(255,255,255,0.55)';
+  }
+
+  function applyLatLon() {
+    const latVal = parseFloat(document.getElementById('latInput').value);
+    const lonVal = parseFloat(document.getElementById('lonInput').value);
+    if (isNaN(latVal) || latVal < -90 || latVal > 90) {
+      setStatus('Latitude must be between -90 and 90.', '#ff8080'); return;
+    }
+    if (isNaN(lonVal) || lonVal < -180 || lonVal > 180) {
+      setStatus('Longitude must be between -180 and 180.', '#ff8080'); return;
+    }
+    userLat = latVal;
+    userLon = lonVal;
+    setStatus('\u2713 Showing spectrum for ' + latVal.toFixed(4) + '\u00b0, ' + lonVal.toFixed(4) + '\u00b0', '#90ee90');
+    drawChart(hoverNm);
+  }
+
+  function setupLatLonInput() {
+    const btn = document.getElementById('zipSubmit');
+    const latInp = document.getElementById('latInput');
+    const lonInp = document.getElementById('lonInput');
+    if (!btn || !latInp || !lonInp) return;
+    btn.addEventListener('click', applyLatLon);
+    [latInp, lonInp].forEach(function(inp) {
+      inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') applyLatLon(); });
+    });
+  }
+
+  function init() {
+    const canvas = document.getElementById('sunChart');
+    if (canvas) {
+      resizeCanvas();
+      setupInteraction(canvas);
+    }
+    setupLatLonInput();
+    drawChart(null);
+  }
+
+  window.addEventListener('resize', function() {
+    resizeCanvas();
+    drawChart(hoverNm);
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+
+</script>
+</body>
+</html>
